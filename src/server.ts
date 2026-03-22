@@ -23,6 +23,7 @@ export const mongoUri: string = process.env.MONGODB_URI || '';
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
   : ['http://localhost:5173'];
+logger.info(`CORS allowed origins: ${JSON.stringify(allowedOrigins)}`);
 
 /**
  * Server INITIALIZATION and CONFIGURATION
@@ -34,7 +35,13 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
 const app = express();
 app.use(cors(
   {
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (curl, Postman, server-to-server)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      logger.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error(`CORS: origin ${origin} not allowed`));
+    },
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
     allowedHeaders: "Content-Type",
     credentials: true
